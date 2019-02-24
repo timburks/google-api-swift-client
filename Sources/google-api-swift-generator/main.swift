@@ -14,6 +14,7 @@
 
 import Foundation
 import Discovery
+import Commander
 
 extension Discovery.Method {
   func parametersTypeDeclaration(resource : String, method : String) -> String {
@@ -161,25 +162,30 @@ extension Discovery.Service {
   }
 }
 
-func main() throws {
-  let arguments = CommandLine.arguments
-  //print("arguments: \(arguments)\n"
-  
-  let path = arguments[1]
-  let data = try Data(contentsOf: URL(fileURLWithPath: path))
-  //print(String(data:data, encoding:.utf8)!)
+func makeDirectory(name : String) throws {
+  try FileManager.default.createDirectory(atPath: name,
+                                          withIntermediateDirectories: true,
+                                          attributes: nil)
+}
+
+
+let main = command(
+  Argument<String>("API", description: "API description in Google API Discovery Service format"),
+  Option<String>("output", default: ".", description: "output directory")
+) { (filename:String, output:String) in
+  let data = try Data(contentsOf: URL(fileURLWithPath: filename))
   let decoder = JSONDecoder()
   do {
     let service = try decoder.decode(Service.self, from: data)
     let code = service.generateClientLibrary()
-    print(code)
+    let outputFilename = output + "/" + service.className() + ".swift"
+    try makeDirectory(name: output)
+    try code.write(to: URL(fileURLWithPath: outputFilename),
+                   atomically: true,
+                   encoding: String.Encoding.utf8)
   } catch {
     print("error \(error)\n")
   }
 }
 
-do {
-  try main()
-} catch (let error) {
-  print("ERROR: \(error)\n")
-}
+main.run()

@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p Sources
-
 ROOT=../../../.build/debug
-$ROOT/google-api-swift-generator disco-language-v1.json > Sources/Language.swift 
-$ROOT/google-cli-swift-generator disco-language-v1.json > Sources/main.swift 
+$ROOT/google-api-swift-generator disco-language-v1.json --output Sources
+$ROOT/google-cli-swift-generator disco-language-v1.json --output Sources

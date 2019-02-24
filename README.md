@@ -12,20 +12,23 @@ calls from any platform with Swift support should be possible.
 
 API clients are be produced by running the generator with Discovery
 Documents downloaded from the Discovery Service. 
-Running the following writes a client to standard output:
+Running the following writes a client library to the directory named <output>
+(or the current directory if `--output` is unspecified):
 
 ```
-% google-api-swift-generator <filename>
+% google-api-swift-generator <filename> --output <output>
 ```
 
 This project also includes an experimental CLI generator that
 generates command-line interfaces for APIs. These CLIs depend
 on the generated client libraries and are produced with the
-`google-cli-swift-generator` command. Running the following
-writes a CLI `main.swift` to standard output:
+`google-cli-swift-generator` command.
+Running the following writes a CLI `main.swift` 
+to the directory named <output>
+(or the current directory if `--output` is unspecified):
  
 ```
-% google-cli-swift-generator <filename>
+% google-cli-swift-generator <filename> --output <output>
 ```
 
 The [Examples](Examples) directory contains several example 

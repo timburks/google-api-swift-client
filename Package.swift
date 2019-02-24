@@ -25,11 +25,20 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/googleapis/google-auth-library-swift.git", from: "0.4.2"),
+    .package(url: "https://github.com/kylef/Commander.git", .upToNextMinor(from: "0.8.0")),
   ],
   targets: [
-    .target(name: "google-api-swift-generator", dependencies: ["Discovery"], path: "Sources/google-api-swift-generator"),
-    .target(name: "google-cli-swift-generator", dependencies: ["Discovery"], path: "Sources/google-cli-swift-generator"),
-    .target(name: "GoogleAPIRuntime", dependencies: ["OAuth2"], path: "Sources/GoogleAPIRuntime"),
-    .target(name: "Discovery", dependencies: [], path: "Sources/Discovery"),
+    .target(name: "google-api-swift-generator",
+            dependencies: ["Discovery", "Commander"],
+            path: "Sources/google-api-swift-generator"),
+    .target(name: "google-cli-swift-generator",
+            dependencies: ["Discovery", "Commander"],
+            path: "Sources/google-cli-swift-generator"),
+    .target(name: "GoogleAPIRuntime",
+            dependencies: ["OAuth2"],
+            path: "Sources/GoogleAPIRuntime"),
+    .target(name: "Discovery",
+            dependencies: [],
+            path: "Sources/Discovery"),
   ]
 )

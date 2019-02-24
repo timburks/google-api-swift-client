@@ -14,10 +14,11 @@
 
 import Foundation
 import Discovery
+import Commander
 
 var stderr = FileHandle.standardError
 func printerr(_ s : String) {
-  stderr.write(("google-cli-swift-generator WARNING: "+s+"\n").data(using:.utf8)!)
+  stderr.write(("google-cli-swift-generator: "+s+"\n").data(using:.utf8)!)
 }
 
 let ParameterPrefix = ""
@@ -335,23 +336,29 @@ extension Discovery.Service {
   }
 }
 
-func main() throws {
-  let arguments = CommandLine.arguments
-  
-  let path = arguments[1]
-  let data = try Data(contentsOf: URL(fileURLWithPath: path))
+func makeDirectory(name : String) throws {
+  try FileManager.default.createDirectory(atPath: name,
+                                          withIntermediateDirectories: true,
+                                          attributes: nil)
+}
+
+let main = command(
+  Argument<String>("API", description: "API description in Google API Discovery Service format"),
+  Option<String>("output", default: ".", description: "output directory")
+) { (filename:String, output:String) in
+  let data = try Data(contentsOf: URL(fileURLWithPath: filename))
   let decoder = JSONDecoder()
   do {
     let service = try decoder.decode(Service.self, from: data)
     let code = service.generateCLI()
-    print(code)
+    let outputFilename = output + "/main.swift"
+    try makeDirectory(name: output)
+    try code.write(to: URL(fileURLWithPath: outputFilename),
+                   atomically: true,
+                   encoding: String.Encoding.utf8)
   } catch {
     print("error \(error)\n")
   }
 }
 
-do {
-  try main()
-} catch (let error) {
-  print("ERROR: \(error)\n")
-}
+main.run()
