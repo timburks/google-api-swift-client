@@ -48,7 +48,6 @@ extension Parameterizable {
         }
       }
     }
-    print("query: \(q)")
     return q
   }
   public func path(pattern: String) throws -> String {
@@ -68,7 +67,6 @@ extension Parameterizable {
         }
       }
     }
-    print("path: \(pattern)")
     return pattern
   }
 }
@@ -89,7 +87,8 @@ open class Service {
     _ error : Error?,
     _ completion : @escaping(Z?, Error?) -> ()) {
     if let data = data {
-      print(String(data:data, encoding:.utf8)!)
+      // uncomment the following line to print response text (JSON)
+      //print(String(data:data, encoding:.utf8)!)
       let decoder = JSONDecoder()
       do {
         let json = try? JSONSerialization.jsonObject(with: data, options: [])

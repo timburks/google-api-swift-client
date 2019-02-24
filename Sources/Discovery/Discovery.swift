@@ -123,7 +123,7 @@ public class Schema : Codable {
     case annotations
   }
   
-  public func Type() -> String {
+  public func schemaType() -> String {
     if let type = type {
       switch type {
       case "string": return "String"
@@ -132,7 +132,7 @@ public class Schema : Codable {
       case "boolean": return "Bool"
       case "any": return "JSONAny"
       case "array":
-        return "[" + self.ItemsType() + "]"
+        return "[" + self.itemsType() + "]"
       case "object":
         return "Object"
       default:
@@ -145,15 +145,15 @@ public class Schema : Codable {
     return "UNKNOWN SCHEMA TYPE"
   }
   
-  public func ItemsType() -> String {
+  public func itemsType() -> String {
     if let items = items {
-      return items.Type()
+      return items.schemaType()
     } else {
       return "UNKNOWN ITEM TYPE"
     }
   }
   
-  public func Comment() -> String {
+  public func comment() -> String {
     if let description = description {
       return " // " + description
     } else {
@@ -185,42 +185,42 @@ public class Method : Codable {
   public var supportsSubscription: Bool?
   public var flatPath : String?
   
-  public func HasResponse() -> Bool {
+  public func hasResponse() -> Bool {
     if response != nil {
       return true
     }
     return false
   }
   
-  public func ResponseTypeName() -> String {
+  public func responseTypeName() -> String {
     if let response = response {
       return response.ref
     }
     return "ERROR-UNKNOWN-RESPONSE-TYPE"
   }
   
-  public func HasRequest() -> Bool {
+  public func hasRequest() -> Bool {
     if request != nil {
       return true
     }
     return false
   }
   
-  public func RequestTypeName() -> String {
+  public func requestTypeName() -> String {
     if let request = request {
       return request.ref
     }
     return "ERROR-UNKNOWN-REQUEST-TYPE"
   }
   
-  public func HasParameters() -> Bool {
+  public func hasParameters() -> Bool {
     if let parameters = parameters {
       return parameters.count > 0
     }
     return false
   }
   
-  public func ParametersTypeName(resource : String, method : String) -> String {
+  public func parametersTypeName(resource : String, method : String) -> String {
     if parameters != nil {
       return resource.capitalized() + method.camelCased() + "Parameters"
     }
@@ -268,11 +268,11 @@ public class Service : Codable {
   public var schemas : [String : Schema]?
   public var methods : [String : Method]?
   public var resources : [String : Resource]?
-  
-  func BaseURLWithVersion() -> String {
-    return self.baseUrl + self.version + "/"
+    
+  public func className() -> String {
+    return self.name.capitalized() + self.version.capitalized()
   }
-  
+    
   public func schema(name: String) -> Schema? {
     if let schemas = schemas {
       return schemas[name]

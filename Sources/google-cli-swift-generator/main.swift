@@ -117,13 +117,12 @@ extension Discovery.Method {
     }
     return s
   }
-  
-  func Invocation(serviceName: String,
-                  resourceName : String,
-                  resource: Discovery.Resource,
-                  methodName : String,
-                  method: Discovery.Method,
-                  requestSchema: Schema?) -> String {
+  func generateMethodInvocation(service: Discovery.Service,
+                                resourceName : String,
+                                resource: Discovery.Resource,
+                                methodName : String,
+                                method: Discovery.Method,
+                                requestSchema: Schema?) -> String {
     var s = "\n"
     s.addLine(indent:4, "$0.command(")
     s.addLine(indent:6, "\"" + resourceName + "." + methodName + "\",")
@@ -159,9 +158,9 @@ extension Discovery.Method {
       s.addLine(indent:6, r + " in")
     }
     s.addLine(indent:6, "do {")
-    if self.HasParameters() {
-      s.addLine(indent:8, "var parameters = " + serviceName.capitalized() + "."
-        + self.ParametersTypeName(resource:resourceName, method:methodName) + "()")
+    if self.hasParameters() {
+      s.addLine(indent:8, "var parameters = " + service.className() + "."
+        + self.parametersTypeName(resource:resourceName, method:methodName) + "()")
       if let parameters = parameters {
         for p in parameters.sorted(by: { $0.key < $1.key }) {
           if p.value.type == "string" || p.value.type == "integer" {
@@ -172,9 +171,9 @@ extension Discovery.Method {
         }
       }
     }
-    if self.HasRequest() {
-      s.addLine(indent:8, "var request = " + serviceName.capitalized() + "."
-        + self.RequestTypeName() + "()")
+    if self.hasRequest() {
+      s.addLine(indent:8, "var request = " + service.className() + "."
+        + self.requestTypeName() + "()")
       if let requestSchema = requestSchema,
         let properties = requestSchema.properties {
         for p in properties.sorted(by: { $0.key < $1.key }) {
@@ -195,15 +194,15 @@ extension Discovery.Method {
     s.addLine(indent:8, "let sem = DispatchSemaphore(value: 0)")
     let fullMethodName = (resourceName + "_" + methodName)
     
-    var invocation = "try " + serviceName + "." + fullMethodName + "("
-    if self.HasRequest() {
-      if self.HasParameters() {
+    var invocation = "try " + service.serviceName() + "." + fullMethodName + "("
+    if self.hasRequest() {
+      if self.hasParameters() {
         invocation += "request: request, parameters:parameters"
       } else {
         invocation += "request:request"
       }
     } else {
-      if self.HasParameters() {
+      if self.hasParameters() {
         invocation += "parameters:parameters"
       }
     }
@@ -211,13 +210,21 @@ extension Discovery.Method {
     s.addLine(indent:8, invocation)
     
     var arguments = ""
-    if self.HasResponse() {
+    if self.hasResponse() {
       arguments += "response, "
     }
     arguments += "error in"
     s.addLine(indent:10, arguments)
-    if self.HasResponse() {
-      s.addLine(indent:10, "if let response = response { print (\"RESPONSE: \\(response)\") }")
+    if self.hasResponse() {
+      s.addLine(indent:10, "if let response = response {")
+      s.addLine(indent:12, "print(\"RESPONSE: \" + String(describing: type(of: response)))")
+      s.addLine(indent:12, "if let jsonData = try? JSONEncoder().encode(response),")
+      s.addLine(indent:14, "let jsonString = String(data: jsonData, encoding: .utf8) {")
+      s.addLine(indent:14, "print (jsonString)")
+      s.addLine(indent:12, "} else {")
+      s.addLine(indent:14, "print(\"\\(String(describing:response))\")")
+      s.addLine(indent:12, "}")
+      s.addLine(indent:10, "}")
     }
     s.addLine(indent:10, "if let error = error { print (\"ERROR: \\(error)\") }")
     s.addLine(indent:10, "sem.signal()")
@@ -232,23 +239,23 @@ extension Discovery.Method {
 }
 
 extension Discovery.Resource {
-  func generate(service: Service, name: String) -> String {
+  func generateMethodInvocations(service: Service, name: String) -> String {
     var s = ""
     if let methods = self.methods {
       for m in methods.sorted(by:  { $0.key < $1.key }) {
-        let requestSchema = service.schema(name: m.value.RequestTypeName())
-        s += m.value.Invocation(serviceName:service.serviceName(),
-                                resourceName:name,
-                                resource:self,
-                                methodName:m.key,
-                                method:m.value,
-                                requestSchema:requestSchema
+        let requestSchema = service.schema(name: m.value.requestTypeName())
+        s += m.value.generateMethodInvocation(service:service,
+                                              resourceName:name,
+                                              resource:self,
+                                              methodName:m.key,
+                                              method:m.value,
+                                              requestSchema:requestSchema
         )
       }
     }
     if let resources = self.resources {
       for r in resources.sorted(by: { $0.key < $1.key }) {
-        s += r.value.generate(service: service, name: name + "_" + r.key)
+        s += r.value.generateMethodInvocations(service: service, name: name + "_" + r.key)
       }
     }
     return s
@@ -256,9 +263,6 @@ extension Discovery.Resource {
 }
 
 extension Discovery.Service {
-  func serviceTitle() -> String {
-    return self.name.capitalized()
-  }
   func serviceName() -> String {
     return self.name
   }
@@ -279,7 +283,7 @@ extension Discovery.Service {
     }
     return scopeSet.sorted()
   }
-  func generate() -> String {
+  func generateCLI() -> String {
     var s = Discovery.License
     s.addLine()
     for i in
@@ -306,7 +310,7 @@ extension Discovery.Service {
     s.addLine(indent:2, "guard let tokenProvider = BrowserTokenProvider(credentials:CLIENT_CREDENTIALS, token:TOKEN) else {")
     s.addLine(indent:4, "return")
     s.addLine(indent:2, "}")
-    s.addLine(indent:2, "let \(self.serviceName()) = try \(self.serviceTitle())(tokenProvider:tokenProvider)")
+    s.addLine(indent:2, "let \(self.serviceName()) = try \(self.className())(tokenProvider:tokenProvider)")
     s.addLine()
     s.addLine(indent:2, "let group = Group {")
     s.addLine(indent:4, "$0.command(\"login\", description:\"Log in with browser-based authentication.\") {")
@@ -315,7 +319,7 @@ extension Discovery.Service {
     s.addLine(indent:4, "}")
     if let resources = resources {
       for r in resources.sorted(by: { $0.key < $1.key }) {
-        s += r.value.generate(service: self, name: r.key)
+        s += r.value.generateMethodInvocations(service: self, name: r.key)
       }
     }
     s.addLine(indent:2, "}")
@@ -339,7 +343,7 @@ func main() throws {
   let decoder = JSONDecoder()
   do {
     let service = try decoder.decode(Service.self, from: data)
-    let code = service.generate()
+    let code = service.generateCLI()
     print(code)
   } catch {
     print("error \(error)\n")

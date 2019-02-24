@@ -16,13 +16,13 @@ import Foundation
 import Discovery
 
 extension Discovery.Method {
-  func ParametersTypeDeclaration(resource : String, method : String) -> String {
+  func parametersTypeDeclaration(resource : String, method : String) -> String {
     var s = ""
     s.addLine()
     if let parameters = parameters {
-      s.addLine(indent:2, "public struct " + ParametersTypeName(resource:resource, method:method) + " : Parameterizable {")
+      s.addLine(indent:2, "public struct " + parametersTypeName(resource:resource, method:method) + " : Parameterizable {")
       for p in parameters.sorted(by:  { $0.key < $1.key }) {
-        s.addLine(indent:4, "public var " + p.key + " : " + p.value.Type() + "?")
+        s.addLine(indent:4, "public var " + p.key + " : " + p.value.schemaType() + "?")
       }
       s.addLine(indent:4, "public func queryParameters() -> [String] {")
       s.addLine(indent:6, "return [" +
@@ -47,24 +47,24 @@ extension Discovery.Method {
 }
 
 extension Discovery.Resource {
-  func generate(name: String) -> String {
+  func generateCallersForMethods(name: String) -> String {
     var s = ""
     if let methods = self.methods {
       for m in methods.sorted(by:  { $0.key < $1.key }) {
-        if m.value.HasParameters() {
-          s += m.value.ParametersTypeDeclaration(resource:name, method:m.key)
+        if m.value.hasParameters() {
+          s += m.value.parametersTypeDeclaration(resource:name, method:m.key)
         }
         let methodName = name + "_" + m.key
         s.addLine()
         s.addLine(indent:2, "public func \(methodName) (")
-        if m.value.HasRequest() {
-          s.addLine(indent:4, "request: \(m.value.RequestTypeName()),")
+        if m.value.hasRequest() {
+          s.addLine(indent:4, "request: \(m.value.requestTypeName()),")
         }
-        if m.value.HasParameters() {
-          s.addLine(indent:4, "parameters: \(m.value.ParametersTypeName(resource:name, method:m.key)),")
+        if m.value.hasParameters() {
+          s.addLine(indent:4, "parameters: \(m.value.parametersTypeName(resource:name, method:m.key)),")
         }
-        if m.value.HasResponse() {
-          s.addLine(indent:4, "completion: @escaping (\(m.value.ResponseTypeName())?, Error?) -> ()) throws {")
+        if m.value.hasResponse() {
+          s.addLine(indent:4, "completion: @escaping (\(m.value.responseTypeName())?, Error?) -> ()) throws {")
         } else {
           s.addLine(indent:4, "completion: @escaping (Error?) -> ()) throws {")
         }
@@ -75,10 +75,10 @@ extension Discovery.Resource {
           path = m.value.path!
         }
         s.addLine(indent:8, "path: \"\(path)\",")
-        if m.value.HasRequest() {
+        if m.value.hasRequest() {
           s.addLine(indent:8, "request: request,")
         }
-        if m.value.HasParameters() {
+        if m.value.hasParameters() {
           s.addLine(indent:8, "parameters: parameters,")
         }
         s.addLine(indent:8, "completion: completion)")
@@ -87,7 +87,7 @@ extension Discovery.Resource {
     }
     if let resources = self.resources {
       for r in resources.sorted(by:  { $0.key < $1.key }) {
-        s += r.value.generate(name: name + "_" + r.key)
+        s += r.value.generateCallersForMethods(name: name + "_" + r.key)
       }
     }
     return s
@@ -95,7 +95,7 @@ extension Discovery.Resource {
 }
 
 extension Discovery.Service {
-  func generate() -> String {
+  func generateClientLibrary() -> String {
     guard let schemas = schemas else {
       return ""
     }
@@ -108,7 +108,7 @@ extension Discovery.Service {
         s.addLine("import " + i)
     }
     s.addLine()
-    s.addLine("public class \(self.name.capitalized()) : Service {")
+    s.addLine("public class \(self.className()) : Service {")
     s.addLine()
     s.addLine(indent:2, "init(tokenProvider: TokenProvider) throws {")
     s.addLine(indent:4, "try super.init(tokenProvider, \"\(self.baseUrl)\")")
@@ -122,7 +122,7 @@ extension Discovery.Service {
         s.addLine(indent:2, "public struct \(schema.key) : Codable {")
         if let properties = schema.value.properties {
           for p in properties.sorted(by: { $0.key < $1.key }) {
-            s.addLine(indent:4, "public var `\(p.key)` : \(p.value.Type())?")
+            s.addLine(indent:4, "public var `\(p.key)` : \(p.value.schemaType())?")
           }
         }
         s.addLine(indent:2, "}")
@@ -137,7 +137,7 @@ extension Discovery.Service {
               s.addLine(indent:2, "public struct \(schema.key)Item : Codable {")
               if let properties = itemsSchema.properties {
                 for p in properties.sorted(by: { $0.key < $1.key }) {
-                  s.addLine(indent:4, "public var `\(p.key)` : \(p.value.Type())?")
+                  s.addLine(indent:4, "public var `\(p.key)` : \(p.value.schemaType())?")
                 }
               }
               s.addLine("}")
@@ -153,7 +153,7 @@ extension Discovery.Service {
     
     if let resources = resources {
       for r in resources.sorted(by:  { $0.key < $1.key }) {
-        s += r.value.generate(name: r.key)
+        s += r.value.generateCallersForMethods(name: r.key)
       }
     }
     s.addLine("}")
@@ -171,7 +171,7 @@ func main() throws {
   let decoder = JSONDecoder()
   do {
     let service = try decoder.decode(Service.self, from: data)
-    let code = service.generate()
+    let code = service.generateClientLibrary()
     print(code)
   } catch {
     print("error \(error)\n")
