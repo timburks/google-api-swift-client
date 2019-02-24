@@ -254,7 +254,7 @@ public class Service : Codable {
   public var title : String
   public var description : String
   public var icons : [String : String]
-  public var documentationLink : String
+  public var documentationLink : String?
   public var labels : [String]?
   public var `protocol` : String?
   public var baseUrl : String
@@ -263,14 +263,15 @@ public class Service : Codable {
   public var servicePath : String
   public var batchPath : String
   public var parameters : [String : Schema]
-  public var auth : [String : Auth]
+  public var auth : [String : Auth]?
   public var features : [String]?
   public var schemas : [String : Schema]?
   public var methods : [String : Method]?
   public var resources : [String : Resource]?
     
   public func className() -> String {
-    return self.name.capitalized() + self.version.capitalized()
+    return self.name.capitalized() +
+      self.version.capitalized().replacingOccurrences(of:".", with:"_")
   }
     
   public func schema(name: String) -> Schema? {
