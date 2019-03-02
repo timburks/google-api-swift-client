@@ -23,7 +23,7 @@ extension Discovery.Method {
     if let parameters = parameters {
       s.addLine(indent:2, "public struct " + parametersTypeName(resource:resource, method:method) + " : Parameterizable {")
       for p in parameters.sorted(by:  { $0.key < $1.key }) {
-        s.addLine(indent:4, "public var " + p.key + " : " + p.value.schemaType() + "?")
+        s.addLine(indent:4, "public var " + p.key.fieldName() + " : " + p.value.schemaType() + "?")
       }
       s.addLine(indent:4, "public func queryParameters() -> [String] {")
       s.addLine(indent:6, "return [" +
@@ -57,7 +57,7 @@ extension Discovery.Resource {
         }
         let methodName = name + "_" + m.key
         s.addLine()
-        s.addLine(indent:2, "public func \(methodName) (")
+        s.addLine(indent:2, "public func \(methodName.fieldName()) (")
         if m.value.hasRequest() {
           s.addLine(indent:4, "request: \(m.value.requestTypeName()),")
         }
@@ -123,7 +123,7 @@ extension Discovery.Service {
         s.addLine(indent:2, "public struct \(schema.key) : Codable {")
         if let properties = schema.value.properties {
           for p in properties.sorted(by: { $0.key < $1.key }) {
-            s.addLine(indent:4, "public var `\(p.key)` : \(p.value.schemaType())?")
+            s.addLine(indent:4, "public var `\(p.key.fieldName())` : \(p.value.schemaType())?")
           }
         }
         s.addLine(indent:2, "}")
@@ -133,7 +133,7 @@ extension Discovery.Service {
           if let itemType = itemsSchema.type {
             switch itemType {
             case "object":
-              s.addLine(indent:2, "public typealias \(schema.key) = [\(schema.key)Item]")
+              s.addLine(indent:2, "public typealias \(schema.key.fieldName()) = [\(schema.key)Item]")
               s.addLine()
               s.addLine(indent:2, "public struct \(schema.key)Item : Codable {")
               if let properties = itemsSchema.properties {
@@ -147,6 +147,9 @@ extension Discovery.Service {
             }
           }
         }
+      case "any":
+        s.addLine()
+        s.addLine(indent:2, "typealias " + schema.key + " = JSONAny")
       default:
         s.addLine("ERROR-UNHANDLED-SCHEMA-VALUE-TYPE \(schema.key) \(String(describing:schema.value.type))")
       }

@@ -47,6 +47,12 @@ extension String {
     return self.components(separatedBy: "-").joined(separator: "_")
   }
   
+  public func fieldName() -> String {
+    return self
+      .replacingOccurrences(of:".", with:"_")
+      .replacingOccurrences(of:"-", with:"_")
+  }
+  
   public func oneLine() -> String {
     return self
       .replacingOccurrences(of:"\n", with:" ")
@@ -222,7 +228,7 @@ public class Method : Codable {
   
   public func parametersTypeName(resource : String, method : String) -> String {
     if parameters != nil {
-      return resource.capitalized() + method.camelCased() + "Parameters"
+      return (resource.capitalized() + method.camelCased() + "Parameters").fieldName()
     }
     return "ERROR-UNKNOWN-PARAMETERS-TYPE"
   }

@@ -31,7 +31,7 @@ func optionDeclaration(_ prefix: String, _ name: String, _ schema: Schema) -> St
     s += prefix + name
     s += "\", default: [], count: 1, description: \""
     if let d = schema.description {
-      s += d.oneLine()
+      s += d.oneLine().replacingOccurrences(of:"\\`", with:"'")
     }
     s += "\"),"
     return s
@@ -40,7 +40,7 @@ func optionDeclaration(_ prefix: String, _ name: String, _ schema: Schema) -> St
     s += prefix + name
     s += "\", default: [], count: 1, description: \""
     if let d = schema.description {
-      s += d.oneLine()
+      s += d.oneLine().replacingOccurrences(of:"\\`", with:"'")
     }
     s += "\"),"
     return s
@@ -51,7 +51,7 @@ func optionDeclaration(_ prefix: String, _ name: String, _ schema: Schema) -> St
     s += prefix + name
     s += "\", default: [], description: \""
     if let d = schema.description {
-      s += d.oneLine()
+      s += d.oneLine().replacingOccurrences(of:"\\`", with:"'")
     }
     s += "\"),"
     return s
@@ -62,7 +62,7 @@ func optionDeclaration(_ prefix: String, _ name: String, _ schema: Schema) -> St
     s += prefix + name
     s += "\", default: [], description: \""
     if let d = schema.description {
-      s += d.oneLine()
+      s += d.oneLine().replacingOccurrences(of:"\\`", with:"'")
     }
     s += "\"),"
     return s
@@ -83,7 +83,7 @@ extension Discovery.Method {
           if s != "" {
             s += ", "
           }
-          s += ParameterPrefix + p.key
+          s += ParameterPrefix + p.key.replacingOccurrences(of:".", with:"_")
         }
       }
     }
@@ -164,9 +164,10 @@ extension Discovery.Method {
         + self.parametersTypeName(resource:resourceName, method:methodName) + "()")
       if let parameters = parameters {
         for p in parameters.sorted(by: { $0.key < $1.key }) {
+          let parameterName = p.key.replacingOccurrences(of:".", with:"_")
           if p.value.type == "string" || p.value.type == "integer" {
-            s.addLine(indent:8, "if let " + ParameterPrefix + p.key + " = " + ParameterPrefix + p.key + ".first {")
-            s.addLine(indent:10, "parameters." + p.key + " = " + ParameterPrefix + p.key)
+            s.addLine(indent:8, "if let " + ParameterPrefix + parameterName + " = " + ParameterPrefix + parameterName + ".first {")
+            s.addLine(indent:10, "parameters." + parameterName + " = " + ParameterPrefix + parameterName)
             s.addLine(indent:8, "}")
           } 
         }
@@ -263,6 +264,27 @@ extension Discovery.Resource {
   }
 }
 
+extension Discovery.Resource {
+  func scopeSet() -> Set<String> {
+    var scopeSet = Set<String>()
+    if let methods = self.methods {
+      for m in methods {
+        if let scopes = m.value.scopes {
+          for scope in scopes {
+            scopeSet.insert(scope)
+          }
+        }
+      }
+    }
+    if let children = self.resources {
+      for c in children {
+        scopeSet = scopeSet.union(c.value.scopeSet())
+      }
+    }
+    return scopeSet
+  }
+}
+
 extension Discovery.Service {
   func serviceName() -> String {
     return self.name
@@ -271,15 +293,7 @@ extension Discovery.Service {
     var scopeSet = Set<String>()
     if let resources = resources {
       for r in resources {
-        if let methods = r.value.methods {
-          for m in methods {
-            if let scopes = m.value.scopes {
-              for scope in scopes {
-                scopeSet.insert(scope)
-              }
-            }
-          }
-        }
+        scopeSet = scopeSet.union(r.value.scopeSet())
       }
     }
     return scopeSet.sorted()

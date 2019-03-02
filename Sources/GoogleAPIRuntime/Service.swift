@@ -58,7 +58,9 @@ extension Parameterizable {
         if child.label == p {
           switch child.value {
           case let s as String:
-            pattern = pattern.replacingOccurrences(of: "{"+p+"}", with: s)
+            pattern = pattern
+                .replacingOccurrences(of: "{"+p+"}", with: s)
+                .replacingOccurrences(of: "{+"+p+"}", with: s)
           case Optional<Any>.none:
             throw GoogleAPIRuntimeError.missingPathParameter(p)            
           default:
@@ -67,6 +69,7 @@ extension Parameterizable {
         }
       }
     }
+    print(pattern)
     return pattern
   }
 }
@@ -88,7 +91,7 @@ open class Service {
     _ completion : @escaping(Z?, Error?) -> ()) {
     if let data = data {
       // uncomment the following line to print response text (JSON)
-      //print(String(data:data, encoding:.utf8)!)
+      print(String(data:data, encoding:.utf8)!)
       let decoder = JSONDecoder()
       do {
         let json = try? JSONSerialization.jsonObject(with: data, options: [])
